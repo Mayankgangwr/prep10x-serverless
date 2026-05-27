@@ -3,8 +3,10 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import prisma from "@/lib/prisma/client";
 import { env } from "@/config/env";
 
-const baseURL = env.BETTER_AUTH_URL ?? {
-  allowedHosts: ["localhost:3000", "*.vercel.app"],
+const baseURL = {
+  allowedHosts: ["localhost:3000", "*.vercel.app"] as string[],
+  fallback: env.BETTER_AUTH_URL,
+  protocol: "auto" as const,
 };
 
 export const auth = betterAuth({

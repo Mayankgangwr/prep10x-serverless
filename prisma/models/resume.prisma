@@ -1,0 +1,88 @@
+enum ResumeStorageProvider {
+  cloudinary
+  s3
+
+  @@map("resume_storage_provider")
+}
+
+enum ResumeAiStatus {
+  pending
+  processing
+  processed
+  failed
+
+  @@map("resume_ai_status")
+}
+
+enum ResumeAnalysisProvider {
+  gemini
+  openai
+
+  @@map("resume_analysis_provider")
+}
+
+enum RoleReadinessLevel {
+  Low
+  Medium
+  High
+
+  @@map("role_readiness_level")
+}
+
+model Resume {
+  id                String              @id @default(cuid())
+  userId            String              @unique
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  originalFileUrl   String?             @db.Text
+  extractedText     String              @db.Text
+  targetRole        String?             @db.VarChar(120)
+  experienceLevel   String?             @db.VarChar(120)
+  checksum          String              @db.Char(64)
+  fileName          String
+  fileSize          Int
+  mimeType          String
+  resourceType      String
+  storageProvider   ResumeStorageProvider
+  publicId          String
+  secureUrl         String
+  aiStatus          ResumeAiStatus      @default(pending)
+  aiLastProcessedAt DateTime?
+  aiFailureReason   String?             @db.VarChar(2000)
+  softDeleted       Boolean             @default(false)
+  analyses          ResumeAnalysis[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([userId, softDeleted, createdAt])
+  @@index([checksum])
+  @@map("resume")
+}
+
+model ResumeAnalysis {
+  id                    String                @id @default(cuid())
+  resumeId              String
+  resume                Resume                @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  planId                String?
+  providerUsed          ResumeAnalysisProvider
+  modelUsed             String                @db.VarChar(120)
+  resumeScore           Float?
+  roleFitScore          Float?
+  summary               String                @db.Text
+  strengths             String[]              @default([])
+  weaknesses            String[]              @default([])
+  matchedSkills         String[]              @default([])
+  missingSkills         String[]              @default([])
+  experienceGapAnalysis String                @db.Text
+  roleReadinessLevel    RoleReadinessLevel
+  suggestions           String[]              @default([])
+  extractedTextSummary  String?               @db.Text
+  insights              Json?
+  inputTokens           Int                   @default(0)
+  outputTokens          Int                   @default(0)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([resumeId, createdAt])
+  @@index([planId, createdAt])
+  @@map("resume_analysis")
+}

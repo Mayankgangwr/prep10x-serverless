@@ -2,7 +2,6 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { BookOpen, FileText, LayoutDashboard, Map } from "lucide-react";
-import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
 
@@ -34,12 +33,7 @@ export default function DashboardBottomBar() {
   const router = useRouter();
   const pathname = usePathname();
   const activeTab = getActiveTab(pathname);
-
-  if (typeof document === "undefined") {
-    return null;
-  }
-
-  return createPortal(
+  return (
     <nav
       aria-label="Primary"
       className="fixed inset-x-0 bottom-0 z-[9999] border-t border-border/40 bg-background/95 backdrop-blur-xl md:hidden"
@@ -97,7 +91,6 @@ export default function DashboardBottomBar() {
           );
         })}
       </div>
-    </nav>,
-    document.body
+    </nav>
   );
 }
