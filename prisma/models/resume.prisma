@@ -23,7 +23,9 @@ enum ResumeAnalysisProvider {
 
 enum RoleReadinessLevel {
   Low
+  Medium_Low @map("Medium-Low")
   Medium
+  Medium_High @map("Medium-High")
   High
 
   @@map("role_readiness_level")

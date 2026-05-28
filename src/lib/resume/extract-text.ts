@@ -1,13 +1,15 @@
-import { PDFParse } from "pdf-parse";
+import "server-only";
+
+import pdf from "pdf-parse-new";
 const MAX_RESUME_TEXT_CHARS = 12_000;
 
 export const extractTextFromPdf = async (buffer: Buffer): Promise<string> => {
-  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  const parsed = await pdf(buffer);
+
   try {
-    const parsed = await parser.getText();
     return preprocessResumeText(parsed.text) ?? "";
   } finally {
-    await parser.destroy();
+    await parsed.info;
   }
 };
 

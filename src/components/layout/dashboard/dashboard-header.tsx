@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ChevronDown, LogOut, UserCircle2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -19,33 +19,13 @@ type DashboardHeaderProps = {
     } | null;
 };
 
-const routeTitles: Record<string, string> = {
-    "/dashboard": "Dashboard",
-    "/profile": "Profile",
-    "/resume": "Resume",
-    "/roadmap": "Roadmap",
-    "/learning-path": "Learning Path",
-};
-
 export default function DashboardHeader({
     onOpenMobileMenu,
     user,
 }: DashboardHeaderProps) {
-    const pathname = usePathname();
     const router = useRouter();
     const menuRef = useRef<HTMLDivElement>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-    const pageTitle =
-        routeTitles[pathname] ??
-        pathname
-            .replace("/", "")
-            .replace(/-/g, " ")
-            .replace(/\b\w/g, (char) => char.toUpperCase());
-
-    const resolvedTitle = pathname.startsWith("/learning-path")
-        ? "Learning Path"
-        : pageTitle;
 
     const fullName = user?.name?.trim() || "User";
     const initials = fullName
@@ -99,10 +79,6 @@ export default function DashboardHeader({
             <div className="flex h-full items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                     <Logo size={42} fontSize={24} className="lg:hidden" onClick={onOpenMobileMenu} />
-
-                    {/* <h1 className="hidden lg:flex truncate text-base font-semibold tracking-tight text-foreground lg:text-3xl">
-                        {resolvedTitle}
-                    </h1> */}
                 </div>
 
                 <div className="flex items-center gap-2 sm:gap-3">

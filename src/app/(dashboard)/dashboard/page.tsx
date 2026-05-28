@@ -1,14 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCurrentSession } from "@/lib/auth/session";
+import { Card } from "@/components/ui/card";
 import UploadResumeForm from "@/modules/resume/client/upload-resume-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const session = await getCurrentSession();
-
   return (
-
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-3xl font-semibold tracking-tight">Dashboard</h2>

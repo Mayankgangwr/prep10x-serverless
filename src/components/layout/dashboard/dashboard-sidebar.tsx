@@ -6,6 +6,7 @@ import {
     BookOpen,
     ChevronLeft,
     ChevronRight,
+    CreditCard,
     FileText,
     LayoutDashboard,
     LogOut,
@@ -20,8 +21,6 @@ import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth/client";
 import { AUTH_ROUTES } from "@/modules/auth/constants/routes";
 import Logo from "@/components/ui/logo";
-import { tr } from "zod/v4/locales";
-
 type DashboardSidebarProps = {
     collapsed: boolean;
     mobileOpen: boolean;
@@ -38,6 +37,7 @@ type SidebarLink = {
 const navLinks: SidebarLink[] = [
     { label: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={18} /> },
     { label: "Resume", path: "/resume", icon: <FileText size={18} /> },
+    { label: "Plan", path: "/plan", icon: <CreditCard size={18} /> },
     { label: "Roadmap", path: "/roadmap", icon: <Map size={18} /> },
     { label: "Learning Path", path: "/learning-path", icon: <BookOpen size={18} /> },
     { label: "Settings", path: "/settings", icon: <Settings size={18} /> },

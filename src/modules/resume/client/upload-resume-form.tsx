@@ -17,9 +17,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { uploadResumeSchema } from "../schemas";
+import { resumeAnalysisSchema, uploadResumeSchema } from "../schemas";
 import { UploadResumeValues } from "../types";
 import { allowedFileTypes, MAX_FILE_SIZE } from "../constants";
+import { extractText } from "../actions";
+import { buildResumeAnalysisPrompt } from "@/prompts/resume.prompt";
+import { callConfiguredProvider } from "@/providers/ai-service.provider";
+import { validateResponse } from "@/lib/utils";
 
 type UploadResumeFormProps = Record<string, never>;
 
@@ -97,7 +101,19 @@ const UploadResumeForm: React.FC<UploadResumeFormProps> = () => {
 
     const onSubmit = async (values: UploadResumeValues) => {
         try {
-            // await uploadResumeFile(values.resume);
+            const resumeText = await extractText(values.resume);
+            if (!resumeText.trim()) {
+                throw new Error("We could not read any text from this PDF. Please upload a text-based PDF.");
+            }
+
+            const prompt = buildResumeAnalysisPrompt(resumeText, values.targetRole, values.targetExperience, 4);
+            const aiResult = await callConfiguredProvider(prompt);
+            const validated = validateResponse(
+                resumeAnalysisSchema,
+                aiResult.data,
+                "Invalid AI analysis response",
+            );
+
         } catch (error) {
             console.error(error);
 
@@ -189,11 +205,10 @@ const UploadResumeForm: React.FC<UploadResumeFormProps> = () => {
 
                                         <label
                                             htmlFor="resume-upload"
-                                            className={`flex min-h-36 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors duration-200 ${
-                                                resumeFile
-                                                    ? "border-primary bg-primary/5"
-                                                    : "border-border bg-background/40 hover:border-primary/50 hover:bg-primary/2"
-                                            }`}
+                                            className={`flex min-h-36 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors duration-200 ${resumeFile
+                                                ? "border-primary bg-primary/5"
+                                                : "border-border bg-background/40 hover:border-primary/50 hover:bg-primary/2"
+                                                }`}
                                         >
                                             {resumeFile ? (
                                                 <div className="flex items-center gap-3">

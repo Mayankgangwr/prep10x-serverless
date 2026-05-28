@@ -9,6 +9,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   resume        Resume?
+  plans         Plan[]
 
   @@unique([email])
   @@map("user")
