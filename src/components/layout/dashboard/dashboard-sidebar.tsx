@@ -37,7 +37,6 @@ type SidebarLink = {
 const navLinks: SidebarLink[] = [
     { label: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={18} /> },
     { label: "Resume", path: "/resume", icon: <FileText size={18} /> },
-    { label: "Plan", path: "/plan", icon: <CreditCard size={18} /> },
     { label: "Roadmap", path: "/roadmap", icon: <Map size={18} /> },
     { label: "Learning Path", path: "/learning-path", icon: <BookOpen size={18} /> },
     { label: "Settings", path: "/settings", icon: <Settings size={18} /> },

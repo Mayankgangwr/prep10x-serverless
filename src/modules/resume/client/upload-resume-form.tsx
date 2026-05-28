@@ -17,13 +17,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { resumeAnalysisSchema, uploadResumeSchema } from "../schemas";
+import { uploadResumeSchema } from "../schemas";
 import { UploadResumeValues } from "../types";
 import { allowedFileTypes, MAX_FILE_SIZE } from "../constants";
-import { extractText } from "../actions";
-import { buildResumeAnalysisPrompt } from "@/prompts/resume.prompt";
-import { callConfiguredProvider } from "@/providers/ai-service.provider";
-import { validateResponse } from "@/lib/utils";
 
 type UploadResumeFormProps = Record<string, never>;
 
@@ -52,7 +48,7 @@ const UploadResumeForm: React.FC<UploadResumeFormProps> = () => {
     }, [resumeFile]);
 
     const setResumeFile = (file?: File) => {
-        form.setValue("resume", file as any, {
+        form.setValue("resume", file as File, {
             shouldDirty: true,
             shouldTouch: true,
             shouldValidate: true,
@@ -73,7 +69,7 @@ const UploadResumeForm: React.FC<UploadResumeFormProps> = () => {
         if (!allowedFileTypes.includes(selectedFile.type)) {
             form.setError("resume", {
                 type: "manual",
-                message: "Only PDF/DOC/DOCX files are allowed",
+                message: "Only PDF files are allowed",
             });
 
             return;
@@ -99,21 +95,41 @@ const UploadResumeForm: React.FC<UploadResumeFormProps> = () => {
         setResumeFile(undefined);
     };
 
+    const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        void form.handleSubmit(onSubmit)(event);
+    };
+
     const onSubmit = async (values: UploadResumeValues) => {
         try {
-            const resumeText = await extractText(values.resume);
-            if (!resumeText.trim()) {
-                throw new Error("We could not read any text from this PDF. Please upload a text-based PDF.");
+            const formData = new FormData();
+            formData.append("resume", values.resume);
+            formData.append("targetRole", values.targetRole);
+            formData.append("targetExperience", values.targetExperience);
+
+            const response = await fetch("/api/resume/upload", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const payload = (await response.json()) as {
+                    success: false;
+                    error?: { message?: string };
+                };
+
+                throw new Error(
+                    payload.error?.message ?? "Failed to save resume data."
+                );
             }
 
-            const prompt = buildResumeAnalysisPrompt(resumeText, values.targetRole, values.targetExperience, 4);
-            const aiResult = await callConfiguredProvider(prompt);
-            const validated = validateResponse(
-                resumeAnalysisSchema,
-                aiResult.data,
-                "Invalid AI analysis response",
-            );
-
+            form.reset({
+                resume: undefined,
+                targetExperience: "",
+                targetRole: "",
+            });
+            if (inputRef.current) {
+                inputRef.current.value = "";
+            }
         } catch (error) {
             console.error(error);
 
@@ -144,7 +160,7 @@ const UploadResumeForm: React.FC<UploadResumeFormProps> = () => {
                         />
 
                         <span>
-                            Upload your latest resume in PDF/DOC/DOCX format.
+                            Upload your latest resume in PDF format.
                         </span>
                     </div>
 
@@ -176,7 +192,7 @@ const UploadResumeForm: React.FC<UploadResumeFormProps> = () => {
 
             <Form {...form}>
                 <form
-                    onSubmit={form.handleSubmit(onSubmit)}
+                    onSubmit={handleFormSubmit}
                     className="space-y-5"
                 >
                     <FormField
@@ -255,8 +271,8 @@ const UploadResumeForm: React.FC<UploadResumeFormProps> = () => {
                                                     </p>
 
                                                     <p className="text-xs text-muted-foreground">
-                                                        Supported formats:
-                                                        PDF/DOC/DOCX | Max 5 MB
+                                                        Supported format:
+                                                        PDF | Max 5 MB
                                                     </p>
                                                 </>
                                             )}

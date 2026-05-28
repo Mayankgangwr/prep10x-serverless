@@ -5,7 +5,7 @@ import { BookOpen, CreditCard, FileText, LayoutDashboard, Map } from "lucide-rea
 
 import { cn } from "@/lib/utils";
 
-type NavTabId = "dashboard" | "resume" | "plan" | "roadmap" | "learningPath";
+type NavTabId = "dashboard" | "resume" | "roadmap" | "learningPath";
 
 type NavTab = {
   id: NavTabId;
@@ -18,14 +18,12 @@ type NavTab = {
 const tabs: NavTab[] = [
   { id: "dashboard", label: "Home", path: "/dashboard", icon: LayoutDashboard },
   { id: "resume", label: "Resume", path: "/resume", icon: FileText },
-  { id: "plan", label: "Plan", path: "/plan", icon: CreditCard },
   { id: "roadmap", label: "Roadmap", path: "/roadmap", icon: Map },
   { id: "learningPath", label: "Learning", path: "/learning-path", icon: BookOpen },
 ];
 
 const getActiveTab = (pathname: string): NavTabId => {
   if (pathname.startsWith("/resume")) return "resume";
-  if (pathname.startsWith("/plan")) return "plan";
   if (pathname.startsWith("/roadmap")) return "roadmap";
   if (pathname.startsWith("/learning-path")) return "learningPath";
   return "dashboard";

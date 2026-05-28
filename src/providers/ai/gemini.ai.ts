@@ -60,6 +60,7 @@ export const callGemini = async (prompt: string): Promise<unknown> => {
             throw new Error("Invalid JSON received from Gemini service");
         }
     } catch (error: any) {
+        debugger;
         // Handle quota retry hint (Gemini gives retryDelay)
         if (error?.message?.includes("Too Many Requests")) {
             throw new Error("Gemini rate limit exceeded");
