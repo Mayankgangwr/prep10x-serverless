@@ -64,18 +64,25 @@ model ResumeAnalysis {
   id                    String                @id @default(cuid())
   resumeId              String
   resume                Resume                @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  planId                String?
   providerUsed          ResumeAnalysisProvider
   modelUsed             String                @db.VarChar(120)
   resumeScore           Float?
+  resumeScoreBreakdown   Json?
   roleFitScore          Float?
-  summary               String                @db.Text
+  roleFitBreakdown       Json?
+  summary               String?               @db.Text
+  candidateSnapshot     Json?
   strengths             String[]              @default([])
   weaknesses            String[]              @default([])
   matchedSkills         String[]              @default([])
   missingSkills         String[]              @default([])
-  experienceGapAnalysis String                @db.Text
+  skillAnalysis         Json?
+  experienceGapAnalysis Json
   roleReadinessLevel    RoleReadinessLevel
+  roleReadinessRationale String?              @db.Text
+  learningPlanFoundation Json?
+  hiringRecommendation  Json?
+  dataConfidence        Json?
   suggestions           String[]              @default([])
   extractedTextSummary  String?               @db.Text
   insights              Json?
@@ -85,6 +92,5 @@ model ResumeAnalysis {
   updatedAt             DateTime              @updatedAt
 
   @@index([resumeId, createdAt])
-  @@index([planId, createdAt])
   @@map("resume_analysis")
 }
