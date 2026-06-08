@@ -24,7 +24,6 @@ const unauthorizedResponse = () =>
 const resumeUploadFormSchema = z.object({
   targetRole: z.string().min(1, "Target role is required."),
   targetExperience: z.string().min(1, "Target experience is required."),
-  planId: z.string().nullable().optional(),
 });
 
 const checksumBuffer = (buffer: Buffer) => {
@@ -43,11 +42,9 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
     const file = formData.get("resume");
-    const rawPlanId = formData.get("planId");
     const parsed = resumeUploadFormSchema.safeParse({
       targetRole: formData.get("targetRole"),
       targetExperience: formData.get("targetExperience"),
-      planId: typeof rawPlanId === "string" && rawPlanId.length > 0 ? rawPlanId : null,
     });
 
     if (!(file instanceof File)) {
@@ -137,7 +134,6 @@ export async function POST(request: Request) {
           ...mapResumeAnalysisToCreateInput(validatedAnalysis, resume.id, {
             providerUsed: aiResult.providerUsed,
             modelUsed: aiResult.modelUsed,
-            planId: parsed.data.planId ?? null,
             extractedTextSummary: extractedText.slice(0, 500),
           }),
         },

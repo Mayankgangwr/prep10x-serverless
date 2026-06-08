@@ -8,7 +8,7 @@ const getModel = (): GenerativeModel => {
         const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 
         modelInstance = genAI.getGenerativeModel({
-            model: env.GEMINI_MODEL || 'gemini-2.5-flash',
+            model: env.GEMINI_MODEL || 'gemini-3.5-flash',
         });
     }
 
@@ -60,7 +60,6 @@ export const callGemini = async (prompt: string): Promise<unknown> => {
             throw new Error("Invalid JSON received from Gemini service");
         }
     } catch (error: any) {
-        debugger;
         // Handle quota retry hint (Gemini gives retryDelay)
         if (error?.message?.includes("Too Many Requests")) {
             throw new Error("Gemini rate limit exceeded");

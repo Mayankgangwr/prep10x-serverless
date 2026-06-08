@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, FileText, UploadCloud, X } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
@@ -139,14 +139,9 @@ const UploadResumeForm: React.FC<UploadResumeFormProps> = () => {
             });
         }
     };
-
+    
     return (
         <div className="space-y-5">
-            <PageHeader
-                title="Upload Resume"
-                description="Upload your latest resume so we can analyze it against your target role and experience level."
-            />
-
             <div className="rounded-2xl border border-primary/15 bg-primary/5 px-4 py-4">
                 <p className="text-sm font-semibold text-text">
                     How this works

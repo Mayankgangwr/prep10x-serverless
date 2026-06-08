@@ -1,0 +1,262 @@
+// =============================================================================
+// Roadmap / Preparation Plan Models — Enterprise Production Schema
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum PlanStatus {
+  generating       // AI is currently generating the plan
+  generated        // Plan has been generated but not started
+  in_progress      // Candidate has started working on the plan
+  completed        // All days completed
+  paused           // Candidate paused the plan
+  abandoned        // Candidate abandoned mid-way
+  failed           // AI generation failed
+  archived         // Soft-archived (hidden from dashboard, kept for analytics)
+
+  @@map("plan_status")
+}
+
+enum AiProvider {
+  gemini
+  openai
+
+  @@map("ai_provider")
+}
+
+enum ProgressionStage {
+  Foundation
+  Build
+  Simulate
+  Sharpen
+
+  @@map("progression_stage")
+}
+
+enum DayStatus {
+  locked           // Not yet accessible (future day)
+  available        // Unlocked and ready to start
+  in_progress      // Currently being worked on
+  completed        // Marked complete by the user
+  skipped          // User explicitly skipped this day
+
+  @@map("day_status")
+}
+
+// ---------------------------------------------------------------------------
+// Core Preparation Plan Model
+// ---------------------------------------------------------------------------
+
+model PreparationPlan {
+  id                String         @id @default(cuid())
+  userId            String
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  resumeId          String
+  resume            Resume         @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  // ── User Input Parameters ─────────────────────────────────────────────
+  targetRole        String         @db.VarChar(200)
+  experienceLevel   String         @db.VarChar(100)
+  durationWeeks     Int            // 2–8
+  interviewTypes    String[]       @default([])  // ["DSA/Coding", "System Design", ...]
+
+  // ── AI-Generated Plan (full JSON blob for flexible rendering) ─────────
+  planData          Json           // Full AI output — the single source of truth for rendering
+  promptVersion     String         @db.VarChar(20)  @default("2.1.0")
+  planVersion       Int            @default(1)  // Incremented on regeneration
+
+  // ── Promoted Queryable Fields (extracted from planData for SQL queries) ─
+  planTheme         String?        @db.VarChar(300)
+  overallStrategy   String?        @db.Text
+  planConfidence    Int?           @default(0)   // 0–100, from planConfidenceScore
+
+  // ── Status & Lifecycle ────────────────────────────────────────────────
+  planStatus        PlanStatus     @default(generating)
+  startedAt         DateTime?      // When user first started the plan
+  completedAt       DateTime?      // When all days were completed
+  pausedAt          DateTime?      // Last time plan was paused
+  abandonedAt       DateTime?      // When plan was abandoned
+
+  // ── Progress Tracking (denormalized for fast dashboard queries) ────────
+  totalDays         Int            // durationWeeks × 5
+  completedDays     Int            @default(0)
+  skippedDays       Int            @default(0)
+  percentage        Decimal        @default(0.00) @db.Decimal(5,2)
+  currentWeek       Int            @default(1)   // Which week the candidate is currently on
+  currentDay        Int            @default(1)   // Which absolute day (1–totalDays) is current
+
+  // ── Streak Tracking ───────────────────────────────────────────────────
+  currentStreak     Int            @default(0)   // Consecutive days completed without skipping
+  longestStreak     Int            @default(0)   // Best streak achieved
+  lastActivityAt    DateTime?      // Last time the user completed or interacted with a day
+
+  // ── AI Metadata ───────────────────────────────────────────────────────
+  providerUsed      AiProvider
+  modelUsed         String         @db.VarChar(120)
+  inputTokens       Int            @default(0)
+  outputTokens      Int            @default(0)
+  generationTimeMs  Int?           // How long the AI took to generate (ms)
+
+  // ── Soft Delete ───────────────────────────────────────────────────────
+  softDeleted       Boolean        @default(false)
+
+  // ── Timestamps ────────────────────────────────────────────────────────
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  // ── Relations ─────────────────────────────────────────────────────────
+  days              PreparationPlanDay[]
+  generations       PreparationPlanGeneration[]
+  bookmarks         PreparationPlanBookmark[]
+  resumeAnalysis    ResumeAnalysis?
+
+  // ── Indexes ───────────────────────────────────────────────────────────
+  @@index([userId, softDeleted, planStatus, createdAt(sort: Desc)])
+  @@index([userId, softDeleted, createdAt(sort: Desc)])
+  @@index([resumeId])
+  @@index([planStatus])
+  @@index([userId, currentStreak(sort: Desc)])
+
+  @@map("preparation_plan")
+}
+
+// ---------------------------------------------------------------------------
+// Day-Level Progress Tracking
+// ---------------------------------------------------------------------------
+// Each working day in the plan gets its own row for granular tracking.
+// This enables: daily completion UIs, streak logic, time-spent analytics,
+// and per-day notes/reflections.
+
+model PreparationPlanDay {
+  id                String          @id @default(cuid())
+  planId            String
+  plan              PreparationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  // ── Position ──────────────────────────────────────────────────────────
+  weekNumber        Int             // 1-indexed (matches weeklyPlan[].week)
+  dayNumber         Int             // 1–5 within the week
+  absoluteDay       Int             // 1–totalDays across the entire plan
+
+  // ── Content Reference ─────────────────────────────────────────────────
+  // These point to the corresponding entries in planData JSON.
+  // The frontend uses these to look up the day's content from planData.
+  weekTheme         String?         @db.VarChar(300)
+  dayFocus          String?         @db.VarChar(300)
+  progressionStage  ProgressionStage?
+
+  // ── Status & Tracking ─────────────────────────────────────────────────
+  status            DayStatus       @default(locked)
+  startedAt         DateTime?
+  completedAt       DateTime?
+  timeSpentMinutes  Int?            // Self-reported or tracked time spent
+
+  // ── Self-Assessment ───────────────────────────────────────────────────
+  confidenceRating  Int?            // 1–5 self-assessed confidence after completing the day
+  difficultyRating  Int?            // 1–5 self-assessed difficulty of the day
+
+  // ── Timestamps ────────────────────────────────────────────────────────
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // ── Relations ─────────────────────────────────────────────────────────
+  notes             PreparationPlanDayNote[]
+
+  // ── Constraints ───────────────────────────────────────────────────────
+  @@unique([planId, absoluteDay])
+  @@index([planId, weekNumber])
+  @@index([planId, status])
+  @@index([planId, completedAt(sort: Desc)])
+
+  @@map("preparation_plan_day")
+}
+
+// ---------------------------------------------------------------------------
+// Day Notes / Reflections
+// ---------------------------------------------------------------------------
+// Users can add notes, reflections, or "aha moments" to any day.
+// Useful for behavioral interview prep ("tell me about a time...").
+
+model PreparationPlanDayNote {
+  id            String              @id @default(cuid())
+  planDayId     String
+  planDay       PreparationPlanDay  @relation(fields: [planDayId], references: [id], onDelete: Cascade)
+
+  content       String      @db.Text       // The note/reflection content
+  noteType      String      @default("reflection") @db.VarChar(50) // "reflection", "question", "insight", "blocker"
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([planDayId, createdAt(sort: Desc)])
+
+  @@map("preparation_plan_day_note")
+}
+
+// ---------------------------------------------------------------------------
+// Plan Generation History
+// ---------------------------------------------------------------------------
+// Tracks every AI generation attempt for a plan (initial + regenerations).
+// Critical for debugging, cost tracking, and prompt A/B testing.
+
+model PreparationPlanGeneration {
+  id                String          @id @default(cuid())
+  planId            String
+  plan              PreparationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  version           Int         // Plan version this generation produced
+  promptVersion     String      @db.VarChar(20)  // Which prompt version was used
+
+  // ── AI Details ────────────────────────────────────────────────────────
+  providerUsed      AiProvider
+  modelUsed         String      @db.VarChar(120)
+  inputTokens       Int         @default(0)
+  outputTokens      Int         @default(0)
+  generationTimeMs  Int?        // Duration in ms
+
+  // ── Result ────────────────────────────────────────────────────────────
+  success           Boolean     @default(false)
+  failureReason     String?     @db.VarChar(2000) // Why the generation failed (if it did)
+  planDataSnapshot  Json?       // Snapshot of the generated planData (for versioning)
+
+  // ── Trigger Context ───────────────────────────────────────────────────
+  triggeredBy       String      @default("user") @db.VarChar(50) // "user", "system", "auto_retry"
+
+  createdAt         DateTime    @default(now())
+
+  @@index([planId, version(sort: Desc)])
+  @@index([providerUsed, success])
+
+  @@map("preparation_plan_generation")
+}
+
+// ---------------------------------------------------------------------------
+// Bookmarked / Saved Tasks
+// ---------------------------------------------------------------------------
+// Candidates can bookmark specific tasks (coding problems, system design
+// questions, behavioral stories) for quick access during revision week.
+
+model PreparationPlanBookmark {
+  id            String          @id @default(cuid())
+  planId        String
+  plan          PreparationPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  // ── What is bookmarked ────────────────────────────────────────────────
+  // References into the planData JSON structure
+  weekNumber    Int         // Which week the bookmarked item belongs to
+  taskType      String      @db.VarChar(50)  // "codingTask", "systemDesignTask", "behavioralTask", "topic", "domainTask", "caseStudyTask", "takeHomeTask"
+  taskIndex     Int         // Index within that task type's array for the week
+  taskTitle     String      @db.VarChar(500) // Denormalized title for quick display
+  taskSnapshot  Json?       // Snapshot of the task data at bookmark time
+
+  note          String?     @db.Text  // Optional note about why it was bookmarked
+
+  createdAt     DateTime    @default(now())
+
+  @@unique([planId, weekNumber, taskType, taskIndex])
+  @@index([planId, createdAt(sort: Desc)])
+
+  @@map("preparation_plan_bookmark")
+}

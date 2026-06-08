@@ -9,7 +9,7 @@ model User {
   sessions      Session[]
   accounts      Account[]
   resume        Resume?
-  plans         Plan[]
+  preparationPlans PreparationPlan[]
 
   @@unique([email])
   @@map("user")

@@ -34,6 +34,7 @@ enum RoleReadinessLevel {
 model Resume {
   id                String              @id @default(cuid())
   userId            String              @unique
+  resumeAnalysisId  String?
   user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   originalFileUrl   String?             @db.Text
   extractedText     String              @db.Text
@@ -51,7 +52,8 @@ model Resume {
   aiLastProcessedAt DateTime?
   aiFailureReason   String?             @db.VarChar(2000)
   softDeleted       Boolean             @default(false)
-  analyses          ResumeAnalysis[]
+  resumeAnalysis    ResumeAnalysis[]
+  preparationPlans  PreparationPlan[]
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
 
@@ -64,6 +66,8 @@ model ResumeAnalysis {
   id                    String                @id @default(cuid())
   resumeId              String
   resume                Resume                @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  preparationPlanId     String?               @unique
+  preparationPlan       PreparationPlan?      @relation(fields: [preparationPlanId], references: [id], onDelete: Cascade)
   providerUsed          ResumeAnalysisProvider
   modelUsed             String                @db.VarChar(120)
   resumeScore           Float?
